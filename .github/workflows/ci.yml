@@ -11,19 +11,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-18.04, windows-latest]
+        platform: [macos-13, macos-14, ubuntu-22.04, windows-latest]
+        include:
+          - platform: 'macos-14'
+            tauriargs: '--target aarch64-apple-darwin'
+          - platform: 'macos-13'
+            tauriargs: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            tauriargs: ''
+          - platform: 'windows-latest'
+            tauriargs: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v2
-      - name: Install GNU tar
+      - uses: actions/checkout@v4
+      - name: Install macOS deps
         if: runner.os == 'macOS'
         run: |
+          brew install python-setuptools
           echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: sudo apt install libssl-dev librust-openssl-sys-dev
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "::set-output name=dir::$(yarn cache dir)"
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         id: yarn-cache
         with:
           path: |
@@ -31,7 +44,7 @@ jobs:
           key: ${{ matrix.platform }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ matrix.platform }}-yarn-
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -42,9 +55,9 @@ jobs:
           restore-keys: |
             ${{ matrix.platform }}-cargo-v2-
       - name: setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 12
+          node-version: 16
       - name: install Rust stable
         uses: actions-rs/toolchain@v1
         with:
@@ -57,7 +70,7 @@ jobs:
         run: cargo install tauri-bundler; exit ($LASTEXITCODE -ne 101 -and $LASTEXITCODE -ne 0)
         shell: powershell -command "& '{0}'"
       - name: install webkit2gtk (ubuntu only)
-        if: matrix.platform == 'ubuntu-18.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y webkit2gtk-4.0 squashfs-tools
@@ -72,31 +85,31 @@ jobs:
           COMMAND: 'fs.writeFileSync("desktop/yarn.lock","")'
       - uses: tauri-apps/tauri-action@v0
         with:
-          npmScript: "tauri:build"
           projectPath: desktop/
-      - uses: actions/upload-artifact@v2
+          args: ${{ matrix.tauriargs }}
+      - uses: actions/upload-artifact@v4
         with:
           name: my-artifact-${{ runner.os }}
           path: desktop/src-tauri/target/release/bundle
   test-web:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "::set-output name=dir::$(yarn cache dir)"
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         id: yarn-cache
         with:
           path: |
             ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ matrix.platform }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ubuntu-18.04-yarn-
+            ubuntu-22.04-yarn-
       - name: setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 12
+          node-version: 16
       - name: install app dependencies
         run: yarn
       - name: Build
