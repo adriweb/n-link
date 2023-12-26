@@ -57,7 +57,7 @@ jobs:
         run: cargo install tauri-bundler; exit ($LASTEXITCODE -ne 101 -and $LASTEXITCODE -ne 0)
         shell: powershell -command "& '{0}'"
       - name: install webkit2gtk (ubuntu only)
-        if: matrix.platform == 'ubuntu-18.04'
+        if: matrix.platform == 'ubuntu-20.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y webkit2gtk-4.0 squashfs-tools
@@ -79,7 +79,7 @@ jobs:
           name: my-artifact-${{ runner.os }}
           path: desktop/src-tauri/target/release/bundle
   test-web:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Get yarn cache directory path
@@ -92,7 +92,7 @@ jobs:
             ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ matrix.platform }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ubuntu-18.04-yarn-
+            ubuntu-20.04-yarn-
       - name: setup node
         uses: actions/setup-node@v1
         with:
